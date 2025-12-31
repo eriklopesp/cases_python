@@ -1,0 +1,81 @@
+import json
+import pandas as pd
+from sqlalchemy import create_engine, text
+import time
+
+dados_json = {
+    "usuarios": [
+        {
+            "id": 1,
+            "nome": "Erik Lopes",
+            "idade": 32,
+            "cidade": "São Paulo",
+            "compras": [
+                {"produto": "Notebook", "valor": 5500.90, "data": "2025-09-12"},
+                {"produto": "Mouse", "valor": 150.00, "data": "2025-09-14"}
+            ]
+        },
+        {
+            "id": 2,
+            "nome": "Maria Silva",
+            "idade": 28,
+            "cidade": "Belo Horizonte",
+            "compras": [
+                {"produto": "Cadeira Gamer", "valor": 1250.00, "data": "2025-10-01"},
+                {"produto": "Headset", "valor": 400.00, "data": "2025-10-03"}
+            ]
+        },
+        {
+            "id": 3,
+            "nome": "João Almeida",
+            "idade": 40,
+            "cidade": "Curitiba",
+            "compras": []
+        }
+    ],
+    "total_usuarios": 3,
+    "gerado_em": "2025-11-04T15:00:00"
+}
+
+df = pd.json_normalize(dados_json, record_path=['usuarios','compras'],meta=[['usuarios', 'id'], ['usuarios', 'nome'], ['usuarios', 'idade'], ['usuarios', 'cidade']])
+
+engine = create_engine('postgresql+psycopg2://postgres:a93090112A%40@127.0.0.1:5432/postgres')
+print("Conexão com o banco de dados estabelecida com sucesso!")
+
+#meta dados para o log
+pipeline_name = 'Carga_Usuarios_Compras'
+tabela_destino = 'usuarios_compras'
+
+inicio = time.time()
+status = 'SUCESSO'
+erro = None
+
+try:
+    df.to_sql('usuarios_compras', engine, if_exists='replace', index=False)
+    registros_inseridos = len(df)
+except Exception as e:
+    status = 'ERRO'
+    erro = str(e)
+    registros_inseridos = 0
+finally:
+    fim = time.time()
+    tempo_execucao = round(fim - inicio, 2)
+
+    query_log = text("""
+        INSERT INTO etl_logs (pipeline_name, tabela_destino, registros_inseridos, tempo_execucao_seg, status, erro)
+        VALUES (:pipeline_name, :tabela_destino, :registros_inseridos, :tempo_execucao_seg, :status, :erro)
+    """)
+
+    with engine.begin() as conn:
+        conn.execute(query_log, {
+            'pipeline_name': pipeline_name,
+            'tabela_destino': tabela_destino,
+            'registros_inseridos': registros_inseridos,
+            'tempo_execucao_seg': tempo_execucao,
+            'status': status,
+            'erro': erro
+        })
+
+    print(f"Pipeline '{pipeline_name}' finalizado com status: {status}")
+    print(f"Registros inseridos: {registros_inseridos}")
+    print(f"Tempo total: {tempo_execucao}s")

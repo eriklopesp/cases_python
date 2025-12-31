@@ -1,0 +1,26 @@
+from flask import Flask, request, make_response
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    
+    response = make_response("Olá, visitante! 👋")
+
+    # parametros de cabeçalho personalizados
+    response.headers["Content-Type"] = "text/plain; charset=utf-8"
+    response.headers["Cache-Control"] = "no-cache"  # não guardar cache
+    response.headers["X-App-Author"] = "ChatGPT Demo"  # cabeçalho personalizado
+
+    # Definindo um cookie
+    response.set_cookie("user_id", "12345", httponly=True)
+
+    return response
+
+@app.route('/hello')
+def hello():
+    nome = request.args.get("nome", "desconhecido")
+    return f"Olá, {nome}! 👋"
+
+if __name__ == '__main__':
+    app.run(debug=True)
