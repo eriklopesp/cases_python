@@ -18,6 +18,9 @@ modelo = LinearRegression()
 # treinamento
 modelo.fit(X, y)
 
+print(modelo.coef_)
+print(modelo.intercept_)
+
 # previsão de um mês futuro
 previsao = modelo.predict([[6]])
 
