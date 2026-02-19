@@ -14,5 +14,3 @@ def combos(n):
     return resultado
 
 print(combos(10))
-
-
